@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
 
 jobs:
-  simple_deployment_pipeline:
+  build_and_test:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,13 +31,58 @@ jobs:
       - name: Test
         run: npm test
 
+  deploy:
+    needs: [build_and_test]
+    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Trigger deployment
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         run: curl ${{ secrets.RENDER }}
 
+  notify_success:
+    needs: [deploy]
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify Discord - Success
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: "Deployment successful"
+          description: |
+            A new version was successfully deployed.
+
+            Commit: `${{ github.sha }}`
+            Author: ${{ github.actor }}
+            Message: ${{ github.event.head_commit.message }}
+
+  notify_failure:
+    needs: [build_and_test, deploy]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify Discord - Failure
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: "Deployment failed"
+          description: |
+            The deployment pipeline failed.
+
+            Commit: `${{ github.sha }}`
+            Author: ${{ github.actor }}
+            Message: ${{ github.event.head_commit.message }}
+
+            Check the GitHub Actions workflow for details.
+
   tag_release:
-    needs: [simple_deployment_pipeline]
-    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    needs: [deploy]
+    if: ${{ success() }}
     runs-on: ubuntu-latest
 
     permissions:
