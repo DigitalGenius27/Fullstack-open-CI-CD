@@ -29,8 +29,5 @@ jobs:
         run: npm test
 
       - name: Trigger deployment
-<<<<<<< HEAD
+        if: ${{ github.event_name == 'push' }}
         run: curl ${{ secrets.RENDER }}
-=======
-        run: curl ${{ secrets.RENDER }}
->>>>>>> a7432471018bdd6c43c3c70c1de38c0a0e8bb563
