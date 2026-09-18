@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
 
 jobs:
   simple_deployment_pipeline:
@@ -31,6 +34,36 @@ jobs:
       - name: Trigger deployment
         if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         run: curl ${{ secrets.RENDER }}
+
+      - name: Notify Discord - Success
+        if: ${{ success() && github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: "Deployment successful"
+          description: |
+            A new version was successfully deployed.
+
+            Commit: `${{ github.sha }}`
+            Author: ${{ github.actor }}
+            Message: ${{ github.event.head_commit.message }}
+
+      - name: Notify Discord - Failure
+        if: ${{ failure() }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: "Deployment failed"
+          description: |
+            The deployment pipeline failed.
+
+            Commit: `${{ github.sha }}`
+            Author: ${{ github.actor }}
+            Message: ${{ github.event.head_commit.message }}
+
+            Check the GitHub Actions workflow for details.
 
   tag_release:
     needs: [simple_deployment_pipeline]
