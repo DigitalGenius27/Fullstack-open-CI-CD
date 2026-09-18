@@ -41,7 +41,7 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: success
-          title: "Deployment successful 🚀"
+          title: "Deployment successful"
           description: |
             A new version was successfully deployed.
 
@@ -55,7 +55,7 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: failure
-          title: "Deployment failed ❌"
+          title: "Deployment failed"
           description: |
             The deployment pipeline failed.
 
